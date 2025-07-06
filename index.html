@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miriam's Garden - FINAL LOCKED</title>
+    <style>
+        body { margin:0; overflow:hidden; touch-action: none; }
+        canvas { display:block; background:#000; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <audio id="bgMusic" src="Music.mp3" loop></audio>
+    <audio id="rainSound" src="rain.mp3" loop></audio>
+
+    <script>
+        window.onload = function(){
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            function resizeCanvas(){
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            const bgImgs = [new Image(), new Image(), new Image(), new Image()];
+            bgImgs[0].src = "Background.gif";
+            bgImgs[1].src = "Background2.png";
+            bgImgs[2].src = "roombg.png";
+            bgImgs[3].src = "city.jpg";
+            const alienImg = new Image(); alienImg.src = "MainC.png";
+            const miriamImg = new Image(); miriamImg.src = "miriam.png";
+            const basharImg = new Image(); basharImg.src = "bashar.png";
+            const jarImg = new Image(); jarImg.src = "jar.png";
+
+            const memoryImages = [], memoryTexts = [
+                "There's only one hot thing in the photo, not the fire, BUT YOU!",
+                "Last ALCC Event, Wow you look so good!!!!",
+                "Brushing Our Teeth together in SOL",
+                "Infront of scented leaf, I love your smile.",
+                "My pretty girl in Texas-Roadhouse",
+                "Hiking With the LOML",
+                "Laptop selfie, YEAH YEAH",
+                "Laura's Balcony",
+                "Car Selfie with my lady",
+                "Prettiest, Most Beautiful Woman in the World."
+            ];
+            for (let i=1; i<=10; i++){
+                let img = new Image();
+                img.src = "image"+i+".jpg";
+                memoryImages.push(img);
+            }
+
+            // Define the love messages array that was missing
+            const loveLines = [
+    "I love Miriam so much","Texas Road House","MEEMOS, Your first nickname",
+    "SPAN160D , How we met","Our nights where we chill with ZA and watch stuff",
+    "Resident Alien","EVIL, A GREAT SHOW WALLAHI","MORE MEMORIES PLEASEEEE I CANT WAIT",
+    "White Roses and Tulips","I love to play DA BRAWL with you","I love to give you gifts to see you smile!",
+    "I will get you more flowers","MORE DATES! MIRIAM NEEDS MORE DATES","Shopping? I gotchu baby",
+    "My lil lawyer","Top Boy","Prison Break","BRUEGGERS BAGELS YEAH YEAHH",
+    "HAYATI! Don't miss me too much","Habeebti habeebti habeebti habeebti, my habeebti",
+    "Mount Lemmon","Hikes","A Mountain","Chef Wang",
+    "April 2023 - When We started talking","It's you or no one",
+    "SHROOMS FOR THE FIRST TIME LMAOO","Minecraft","I dont wanna play GEM GRAB!!",
+    "Do you still love me?","Would you love me if i was a worm",
+    "Can we get dutch???","Hallo to dis zmyanar","You Motherf***** N....",
+    "Ambatukum","YOU WILL DO GREAT ON YOUR LSATS!!!!!! WALLAHI",
+    "DA BRAWLLL","Lilly is the best brawler isnt she?",
+    "wanna watch animal videos????",
+    "mhmm mhmmm mhmmm - miriam signature sound",
+    "No bye - miriam","OKI",
+    "B and M necklaces, Silver and Gold",
+    "Kanell Joseph","Pedophile catchers",
+    "LIONZ TV","RICK AND MORTY (You didn't like it)",
+    "DO YOU WANNA SMOKE DIS JOINTER??",
+    "Hey, Can I use your car?"
+];
+
+            const bgMusic = document.getElementById('bgMusic');
+            const rainSound = document.getElementById('rainSound');
+            rainSound.volume = 0.3;
+
+            let currentScene = 0;
+            let player = {x:100,y:200,vy:0,jumping:false};
+            let flowers=[], wishes=[], fireflies=[], hearts=[];
+            let loveMessages=[], popup={active:false,type:"",img:null,text:"",timer:0};
+            let dialogue=[], dialogueIdx=0, atFence=false;
+            let raindrops=[], birds=[]; 
+            let keys = {};
+            let touchControls = { left: false, right: false };
+            let floor=canvas.height-100;
+            const jarX=220, jarY=canvas.height-210;
+            let currentPromise=0;
+            const promises=[
+                "Promise: I'll buy you more flowers & dates.",
+                "Promise: I'll stay with you forever.",
+                "Promise: I'll fight for us no matter what.",
+                "Promise: My family already loves you.",
+                "Promise: I never look at other girls.",
+                "Promise: I'll never stop playing brawl with you.",
+                "Promise: I'll spoil you to the max when I have money.",
+                "Promise: We'll own our own house together.",
+                "Promise: I'll buy you a cat.",
+                "Promise: We'll have nice lavish lives.",
+                "Promise: We'll see a Free Palestine in our lifetime."
+            ];
+
+            function spawnFlowers(){
+                flowers=[];wishes=[];loveMessages=[];
+                for(let i=0;i<15;i++)
+                    flowers.push({x:Math.random()*canvas.width,y:canvas.height-30,grow:Math.random()*5,type:Math.random()<0.5?"rose":"tulip"});
+            }
+            function spawnFireflies(){
+                fireflies=[];loveMessages=[];
+                for(let i=0;i<10;i++)
+                    fireflies.push({x:Math.random()*canvas.width,y:Math.random()*(canvas.height/2)+canvas.height/3,
+                        vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*1.5,caught:false,trail:[]});
+            }
+            function initCity(){
+                atFence=false;dialogueIdx=0;raindrops=[];birds=[];
+                for(let i=0;i<100;i++) raindrops.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,speed:2+Math.random()*3});
+                for(let i=0;i<5;i++) birds.push({x:Math.random()*canvas.width,y:50+Math.random()*100,speed:1+Math.random()});
+                dialogue=[
+                    {who:"bashar", text:"Wow, you are the prettiest girl ever."},
+                    {who:"miriam", text:"*blushing* Stop lying!"},
+                    {who:"bashar", text:"We should go to Jordan soon!"},
+                    {who:"miriam", text:"YES... and Tunis! To meet my family."},
+                    {who:"bashar", text:"I'll take you to Petra, Dead Sea..."},
+                    {who:"miriam", text:"I'll take you to the Mediterranean Sea."},
+                    {who:"bashar", text:"You'll be the prettiest girl on the coast."},
+                    {who:"miriam", text:"I'll be your lawyer, helping innocent people."},
+                    {who:"bashar", text:"You'll change so many lives, baby."},
+                    {who:"miriam", text:"As long as I come home to you."},
+                    {who:"bashar", text:"Always. Oh wait... wanna play brawl?"}
+                ];
+            }
+            spawnFlowers();
+
+            // Touch event handlers
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                // Handle UI interactions first
+                if (popup.active && popup.type === "choice") {
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    
+                    // Yes button
+                    if (x > centerX - 65 && x < centerX - 15 && y > centerY + 5 && y < centerY + 45) {
+                        showMemory();
+                        return;
+                    }
+                    // No button
+                    if (x > centerX + 15 && x < centerX + 65 && y > centerY + 5 && y < centerY + 45) {
+                        popup.active = false;
+                        popup.type = "setfree";
+                        popup.timer = 60;
+                        return;
+                    }
+                } else if (popup.active && popup.type === "promise") {
+                    currentPromise = (currentPromise + 1) % promises.length;
+                    return;
+                }
+                
+                // Handle movement and jumping
+                if (x < canvas.width / 2) {
+                    touchControls.left = true;
+                } else {
+                    touchControls.right = true;
+                }
+                
+                // Also trigger jump on tap
+                handleInput('click');
+            }
+
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                
+                // Update movement based on current touch position
+                touchControls.left = x < canvas.width / 2;
+                touchControls.right = x >= canvas.width / 2;
+            }
+
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                touchControls.left = false;
+                touchControls.right = false;
+            }
+
+            document.addEventListener('keydown', e => {
+                keys[e.key]=true;
+                if(popup.active && popup.type==="choice"){
+                    if(e.key.toLowerCase()==="y") showMemory();
+                    else if(e.key.toLowerCase()==="n"){ popup.active=false; popup.type="setfree"; popup.timer=60; }
+                } else if(popup.active && popup.type==="promise" && e.key===" "){
+                    currentPromise = (currentPromise+1)%promises.length;
+                } else handleInput(e.key);
+            });
+            document.addEventListener('keyup', e => keys[e.key]=false);
+            document.addEventListener('click', e => {
+                let mx=e.clientX,my=e.clientY;
+                if(popup.active && popup.type==="choice"){
+                    if(mx>canvas.width/2-65 && mx<canvas.width/2-15 && my>canvas.height/2+5 && my<canvas.height/2+45)
+                        showMemory();
+                    else if(mx>canvas.width/2+15 && mx<canvas.width/2+65 && my>canvas.height/2+5 && my<canvas.height/2+45){
+                        popup.active=false; popup.type="setfree"; popup.timer=60;
+                    }
+                } else if(popup.active && popup.type==="promise"){
+                    currentPromise = (currentPromise+1)%promises.length;
+                } else handleInput('click');
+            });
+            function handleInput(key){
+                if(bgMusic.paused) bgMusic.play();
+                if(currentScene===3 && rainSound.paused) rainSound.play();
+                if(popup.active && popup.type==="memory"){ popup.active=false; }
+                else if(currentScene===3 && atFence){
+                    dialogueIdx++;
+                    if(dialogueIdx>=dialogue.length)
+                        for(let i=0;i<20;i++)
+                            hearts.push({x:canvas.width/2+(Math.random()-0.5)*200,y:canvas.height/2+(Math.random()-0.5)*100,vy:-1-Math.random(),alpha:1});
+                } else if(key===" "||key==="click"){
+                    let jumpPower = (currentScene===2 ? -12 : currentScene===1 ? -14 : -8);
+                    if(!player.jumping){ player.vy=jumpPower; player.jumping=true; }
+                }
+            }
+            function showMemory(){
+                let idx = Math.floor(Math.random()*memoryImages.length);
+                popup.img = memoryImages[idx];
+                popup.text = memoryTexts[idx];
+                popup.type = "memory";
+                popup.active = true;
+                for(let i=0;i<15;i++)
+                    hearts.push({x:canvas.width/2+(Math.random()-0.5)*100,y:canvas.height/2+(Math.random()-0.5)*100,vy:-1-Math.random(),alpha:1});
+            }
+            function update(){
+                // Handle both keyboard and touch controls
+                if(keys['ArrowLeft'] || touchControls.left) player.x -= 3;
+                if(keys['ArrowRight'] || touchControls.right) player.x += 3;
+                
+                player.y += player.vy; player.vy += 0.4;
+
+                if(currentScene===2){
+                    floor=canvas.height-100;
+                    if(player.x<300) floor=canvas.height-200;
+                    if(player.y>floor-40){player.y=floor-40;player.vy=0;player.jumping=false;}
+                    let dist = Math.hypot(player.x - jarX, player.y - jarY);
+                    if(dist<50){ popup.active=true; popup.type="promise"; }
+                    else if(popup.type==="promise"){ popup.active=false; popup.type=""; }
+                } else {
+                    if(player.y>canvas.height-100){player.y=canvas.height-100;player.vy=0;player.jumping=false;}
+                }
+
+                if(!popup.active && !atFence){
+                    if(currentScene===3 && player.x>canvas.width/2-50){atFence=true; rainSound.play();}
+                    else if(player.x>canvas.width){
+                        currentScene++;
+                        if(currentScene===1) spawnFireflies();
+                        else if(currentScene===2) {} // room loads
+                        else if(currentScene===3) initCity();
+                        player.x=-60;
+                    } else if(player.x+60<0){
+                        currentScene--;
+                        if(currentScene===1) spawnFireflies();
+                        else if(currentScene===0) spawnFlowers();
+                        player.x=canvas.width;
+                    }
+                }
+
+               if(currentScene===0){
+                flowers.forEach(f=>{
+                    if(f.grow<50)f.grow+=0.1;
+                    else if(Math.random()<0.005)
+                        wishes.push({x:f.x+5,y:f.y-f.grow,vy:-1,alpha:1,caught:false});
+                });
+                wishes.forEach(w=>{
+                    w.y+=w.vy; w.alpha-=0.002;
+                    if(!w.caught && Math.hypot(player.x+30-w.x,player.y+30-w.y)<20){
+                        w.caught=true;
+                        let msg = "I love you!";
+                        if (loveLines && loveLines.length) {
+                            msg = loveLines[Math.floor(Math.random()*loveLines.length)];
+                        }
+                        loveMessages.push("🌸 "+msg);
+                    }
+                });
+                wishes=wishes.filter(w=>w.alpha>0);
+                if(loveMessages.length>15) loveMessages.shift();
+            }
+
+                if(currentScene===1){
+                    fireflies.forEach(f=>{
+                        f.trail.push({x:f.x,y:f.y,alpha:1}); if(f.trail.length>10) f.trail.shift();
+                        f.x+=f.vx; f.y+=f.vy;
+                        if(f.x<0||f.x>canvas.width)f.vx*=-1;
+                        if(f.y<canvas.height/3||f.y>canvas.height)f.vy*=-1;
+                        if(!f.caught&&player.x+60>f.x&&player.x<f.x+5&&player.y+60>f.y&&player.y<f.y+5){
+                            f.caught=true; popup.active=true; popup.type="choice";
+                        }
+                    });
+                }
+
+                if(currentScene===3){
+                    raindrops.forEach(r=>{r.y+=r.speed;if(r.y>canvas.height){r.y=0;r.x=Math.random()*canvas.width;}});
+                    birds.forEach(b=>{b.x+=b.speed;if(b.x>canvas.width+20){b.x=-20;b.y=50+Math.random()*100;}});
+                    hearts.forEach(h=>{h.y+=h.vy;h.alpha-=0.01;}); hearts=hearts.filter(h=>h.alpha>0);
+                }
+            }
+
+            function draw(){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.drawImage(bgImgs[currentScene],0,0,canvas.width,canvas.height);
+
+                if(currentScene===0){
+                    flowers.forEach(f=>{
+                        ctx.fillStyle="darkgreen"; ctx.fillRect(f.x,f.y-f.grow,6,f.grow);
+                        if(f.grow>=50){
+                            ctx.fillStyle=f.type==="rose"?"white":"purple";
+                            ctx.beginPath(); ctx.arc(f.x+3,f.y-f.grow,f.type==="rose"?12:10,0,Math.PI*2); ctx.fill();
+                        }
+                    });
+                    wishes.forEach(w=>{
+                        if(!w.caught){
+                            ctx.fillStyle=`rgba(255,255,0,${w.alpha})`;
+                            ctx.beginPath(); ctx.arc(w.x,w.y,4,0,Math.PI*2); ctx.fill();
+                        }
+                    });
+                    ctx.fillStyle="#111"; ctx.font="22px Arial";
+                    ctx.shadowColor="rgba(255,255,150,0.8)"; ctx.shadowBlur=6;
+                    ctx.fillText("Hurry! Catch the blooms from the",20,40);
+                    ctx.fillText("White Roses and Tulips to make",20,65);
+                    ctx.fillText("Miriam Happy!",20,90);
+                    loveMessages.forEach((m,i)=>ctx.fillText(m,20,130+i*30));
+                    ctx.shadowBlur=0;
+                }
+
+                if(currentScene===1){
+                    ctx.fillStyle="#111"; ctx.font="22px Arial";
+                    ctx.shadowColor="rgba(255,165,0,0.8)"; ctx.shadowBlur=6;
+                    ctx.fillText("Catch the Fireflies!",20,40); ctx.shadowBlur=0;
+                    fireflies.forEach(f=>{
+                        f.trail.forEach(t=>{
+                            ctx.fillStyle=`rgba(255,140,0,${t.alpha})`;
+                            ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fill();
+                            t.alpha-=0.1;
+                        });
+                        if(!f.caught){
+                            ctx.fillStyle="yellow";
+                            ctx.beginPath(); ctx.arc(f.x,f.y,5,0,Math.PI*2); ctx.fill();
+                        }
+                    });
+                }
+
+                if(currentScene===2){
+                    ctx.fillStyle="#111"; ctx.font="22px Arial";
+                    ctx.shadowColor="rgba(0,200,0,0.8)"; ctx.shadowBlur=6;
+                    ctx.fillText("Jar of Promises",20,40);
+                    ctx.shadowBlur=0;
+
+                    ctx.drawImage(jarImg, jarX-20, jarY-30, 50,50);
+                    if(popup.active && popup.type==="promise"){
+                        ctx.fillStyle="rgba(0,100,0,0.7)";
+                        ctx.fillRect(canvas.width/2-180,canvas.height/2-40,360,80);
+                        ctx.fillStyle="white"; ctx.font="18px Arial";
+                        wrapText(ctx, promises[currentPromise], canvas.width/2, canvas.height/2-5, 340, 22);
+                    }
+                }
+
+                if(currentScene===3){
+                    ctx.strokeStyle="rgba(173,216,230,0.5)"; ctx.beginPath();
+                    raindrops.forEach(r=>{ctx.moveTo(r.x,r.y); ctx.lineTo(r.x,r.y+10);}); ctx.stroke();
+                    ctx.fillStyle="white";
+                    birds.forEach(b=>{ctx.beginPath(); ctx.arc(b.x,b.y,2,0,Math.PI*2); ctx.fill();});
+                    ctx.fillStyle="gray";
+                    ctx.fillRect(canvas.width/2-55, canvas.height-100, 110,8);
+                    for(let i=0;i<6;i++)
+                        ctx.fillRect(canvas.width/2-50+i*20,canvas.height-120,4,20);
+
+                    if(atFence){
+                        ctx.drawImage(basharImg,canvas.width/2-80,canvas.height-110,110,110);
+                        ctx.drawImage(miriamImg,canvas.width/2+20,canvas.height-110,110,110);
+                        if(dialogueIdx<dialogue.length) drawSpeechBubble(dialogue[dialogueIdx]);
+                        hearts.forEach(h=>{
+                            ctx.fillStyle=`rgba(255,100,150,${h.alpha})`;
+                            ctx.beginPath(); ctx.arc(h.x,h.y,6,0,Math.PI*2); ctx.fill();
+                        });
+                    }
+                }
+
+                if((currentScene!==3 || !atFence) || currentScene===2)
+                    ctx.drawImage(alienImg, player.x, player.y, 60,60);
+
+                if(popup.active && popup.type==="choice"){
+                    ctx.fillStyle="rgba(0,100,0,0.7)";
+                    ctx.fillRect(canvas.width/2-150,canvas.height/2-30,300,60);
+                    ctx.fillStyle="white"; ctx.font="20px Arial";
+                    ctx.fillText("Unlock Memory?", canvas.width/2-70, canvas.height/2);
+                    ctx.fillStyle="green"; ctx.fillRect(canvas.width/2-60,canvas.height/2+10,40,30);
+                    ctx.fillStyle="white"; ctx.fillText("Yes", canvas.width/2-55, canvas.height/2+33);
+                    ctx.fillStyle="red"; ctx.fillRect(canvas.width/2+20,canvas.height/2+10,40,30);
+                    ctx.fillStyle="white"; ctx.fillText("No", canvas.width/2+27, canvas.height/2+33);
+                }
+                if(popup.type==="setfree" && popup.timer>0){
+                    ctx.fillStyle="rgba(255,255,255,0.8)";
+                    ctx.fillRect(canvas.width/2-80, canvas.height/2-20,160,40);
+                    ctx.fillStyle="#111"; ctx.font="18px Arial";
+                    ctx.fillText("Firefly set free!", canvas.width/2-45, canvas.height/2+5);
+                    popup.timer--;
+                }
+                if(popup.active && popup.type==="memory" && popup.img){
+                    let iw=canvas.width*0.8, ih=canvas.height*0.6;
+                    ctx.drawImage(popup.img, canvas.width/2-iw/2, canvas.height/2-ih/2, iw, ih);
+                    ctx.fillStyle="#fff"; ctx.font="24px Arial";
+                    ctx.fillText(popup.text, canvas.width/2-ctx.measureText(popup.text).width/2, canvas.height/2+ih/2+30);
+                }
+
+                // Draw touch control indicators for mobile
+                if ('ontouchstart' in window) {
+                    ctx.fillStyle = "rgba(255,255,255,0.1)";
+                    ctx.fillRect(0, 0, canvas.width/2, canvas.height);
+                    ctx.fillRect(canvas.width/2, 0, canvas.width/2, canvas.height);
+                    
+                    ctx.fillStyle = "rgba(255,255,255,0.3)";
+                    ctx.font = "16px Arial";
+                    ctx.fillText("◀ LEFT", 20, canvas.height - 20);
+                    ctx.fillText("RIGHT ▶", canvas.width - 80, canvas.height - 20);
+                    ctx.fillText("TAP TO JUMP", canvas.width/2 - 50, canvas.height - 20);
+                }
+            }
+
+            function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+                const words = text.split(' '); let line = '', lines=[];
+                for (let n=0; n<words.length; n++) {
+                    let testLine = line + words[n] + ' ';
+                    if (ctx.measureText(testLine).width > maxWidth && n>0) {
+                        lines.push(line); line = words[n] + ' ';
+                    } else line = testLine;
+                }
+                lines.push(line);
+                for (let i=0; i<lines.length; i++)
+                    ctx.fillText(lines[i], x - ctx.measureText(lines[i]).width/2, y + i*lineHeight);
+            }
+
+            function drawSpeechBubble(line){
+                let textWidth=ctx.measureText(line.text).width;
+                let bubbleWidth=textWidth+30;
+                let x=line.who==="bashar"?canvas.width/2-180:canvas.width/2+50;
+                let y=canvas.height-180;
+                ctx.fillStyle="white"; ctx.strokeStyle="#999"; ctx.lineWidth=2;
+                ctx.beginPath(); ctx.roundRect(x-10,y-30,bubbleWidth,50,10); ctx.fill(); ctx.stroke();
+                ctx.fillStyle="#000"; ctx.font="20px Arial"; ctx.fillText(line.text,x,y);
+            }
+
+            CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+                if(w<2*r)r=w/2;if(h<2*r)r=h/2;
+                this.beginPath();this.moveTo(x+r,y);
+                this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);
+                this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);
+                this.closePath();return this;
+            };
+
+            function gameLoop(){ update(); draw(); requestAnimationFrame(gameLoop); }
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
